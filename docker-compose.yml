@@ -73,12 +73,67 @@ services:
     expose:
       - "80"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
+    configs:
+      - source: caddyfile
+        target: /etc/caddy/Caddyfile
     depends_on:
       - backend
       - frontend
+
+configs:
+  caddyfile:
+    content: |
+      :80 {
+          header {
+              X-Content-Type-Options nosniff
+              ?Content-Security-Policy "frame-ancestors 'self'"
+              Referrer-Policy strict-origin-when-cross-origin
+          }
+
+          handle /api/* {
+              reverse_proxy backend:8000 {
+                  transport http {
+                      read_timeout 480s
+                  }
+              }
+          }
+
+          handle /health {
+              reverse_proxy backend:8000
+          }
+
+          handle /api/telegram/webhook {
+              reverse_proxy backend:8000
+          }
+
+          handle /docs {
+              reverse_proxy backend:8000
+          }
+          handle /docs/* {
+              reverse_proxy backend:8000
+          }
+          handle /redoc {
+              reverse_proxy backend:8000
+          }
+          handle /openapi.json {
+              reverse_proxy backend:8000
+          }
+
+          handle /cv/* {
+              reverse_proxy backend:8000
+          }
+
+          @tracer_param query cv=*
+          handle @tracer_param {
+              reverse_proxy backend:8000
+          }
+
+          handle {
+              reverse_proxy frontend:80
+          }
+      }
 
 volumes:
   pgdata:
