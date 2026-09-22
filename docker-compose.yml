@@ -13,8 +13,6 @@ services:
       POSTGRES_DB: jobnavigator
     volumes:
       - pgdata:/var/lib/postgresql/data
-    ports:
-      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U jobnavigator"]
       interval: 5s
@@ -25,9 +23,6 @@ services:
     # Prebuilt on every release (ghcr.io, .github/workflows/images.yml): `docker compose pull`
     # skips the Chromium build. `docker compose up --build` still builds from source.
     image: ghcr.io/vesaias/jobnavigator-backend:${JN_IMAGE_TAG:-latest}
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
     restart: unless-stopped
     logging:
       driver: json-file
@@ -38,24 +33,18 @@ services:
     environment:
       DATABASE_URL: postgresql://jobnavigator:${POSTGRES_PASSWORD:-password}@db:5432/jobnavigator
       CLAUDE_CODE_OAUTH_TOKEN: ${CLAUDE_CODE_OAUTH_TOKEN:-}
-    ports:
-      - "127.0.0.1:8000:8000"   # everything external goes through Caddy on :80; the raw API stays on loopback
     depends_on:
       db:
         condition: service_healthy
     volumes:
-      - ./backend:/app/backend
-      - ./backups:/app/backups
-      - ./backend/.linkedin_api:/root/.linkedin_api
+      - backups:/app/backups
+      - linkedin_api:/root/.linkedin_api
       - codex_auth:/root/.codex
       # agy keeps its OAuth token in a file here; no keyring in this image.
       - antigravity_auth:/root/.gemini
 
   frontend:
     image: ghcr.io/vesaias/jobnavigator-frontend:${JN_IMAGE_TAG:-latest}
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
     restart: unless-stopped
     logging:
       driver: json-file
@@ -75,9 +64,8 @@ services:
       options:
         max-size: "20m"
         max-file: "5"
-    ports:
-      - "80:80"
-      - "443:443"
+    expose:
+      - "80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
@@ -88,6 +76,8 @@ services:
 
 volumes:
   pgdata:
+  backups:
+  linkedin_api:
   caddy_data:
   caddy_config:
   codex_auth:
