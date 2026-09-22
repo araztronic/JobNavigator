@@ -23,6 +23,9 @@ services:
     # Prebuilt on every release (ghcr.io, .github/workflows/images.yml): `docker compose pull`
     # skips the Chromium build. `docker compose up --build` still builds from source.
     image: ghcr.io/vesaias/jobnavigator-backend:${JN_IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
     restart: unless-stopped
     logging:
       driver: json-file
@@ -45,6 +48,9 @@ services:
 
   frontend:
     image: ghcr.io/vesaias/jobnavigator-frontend:${JN_IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
     restart: unless-stopped
     logging:
       driver: json-file
